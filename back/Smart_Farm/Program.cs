@@ -249,12 +249,10 @@ using (var scope = app.Services.CreateScope())
     }
 }
 
-// Swagger only in Development
-if (app.Environment.IsDevelopment())
-{
+
     app.UseSwagger();
     app.UseSwaggerUI();
-}
+
 
 app.UseHttpsRedirection();
 

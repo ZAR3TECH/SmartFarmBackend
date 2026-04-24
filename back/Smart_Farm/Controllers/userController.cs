@@ -50,7 +50,25 @@ namespace Smart_Farm.Controllers
             domain.Latitude = b.Latitude;
             domain.Longitude = b.Longitude;
             domain.Role = b.Role;
+            if (b.Phones is not null)
+            {
+                // Remove existing phones
+                var existingPhones = await db.USER_PHONEs
+                    .Where(p => p.Uid == uid)
+                    .ToListAsync(cancellationToken);
 
+                db.USER_PHONEs.RemoveRange(existingPhones);
+
+                // Add new phones
+                foreach (var phone in b.Phones.Where(p => !string.IsNullOrWhiteSpace(p)))
+                {
+                    db.USER_PHONEs.Add(new USER_PHONE
+                    {
+                        Uid = uid,
+                        Phone = phone.Trim()
+                    });
+                }
+            }
             // Update identity user (email/username) if linked
             var appUser = await _userManager.Users.FirstOrDefaultAsync(u => u.DomainUserId == uid, cancellationToken);
             if (appUser is not null)
@@ -78,7 +96,7 @@ namespace Smart_Farm.Controllers
             }
 
             await tx.CommitAsync(cancellationToken);
-            return NoContent();
+            return Ok("User information has been updated");
         }
 
         [HttpDelete("me")]

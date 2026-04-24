@@ -109,6 +109,8 @@ public class UserUpdateDto
     public decimal? Latitude { get; set; }
     public decimal? Longitude { get; set; }
     public string? Role { get; set; }
+    public required List<string> Phones { get; set; }
+
 }
 
 public class IrrigationRequestDto

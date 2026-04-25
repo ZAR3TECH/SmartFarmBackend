@@ -12,8 +12,8 @@ using Smart_Farm.Models;
 namespace Smart_Farm.Migrations
 {
     [DbContext(typeof(farContext))]
-    [Migration("20260421204536_RemoveBelongTo")]
-    partial class RemoveBelongTo
+    [Migration("20260425005030_RemoveImageFields")]
+    partial class RemoveImageFields
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -194,20 +194,12 @@ namespace Smart_Farm.Migrations
                     b.Property<string>("GeminiArabicReport")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<byte[]>("ImageBytes")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<string>("ImageContentType")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("ImageFileName")
-                        .HasMaxLength(260)
-                        .HasColumnType("nvarchar(260)");
-
                     b.Property<string>("Result")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("plant_image")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("ADid")
                         .HasName("PK__AI_Diagn__7931D1B8DEB8ED6F");
@@ -622,12 +614,6 @@ namespace Smart_Farm.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ImageGalleryJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("plant_image")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<decimal?>("Price")
                         .HasColumnType("decimal(10, 2)");
 
@@ -648,30 +634,6 @@ namespace Smart_Farm.Migrations
                     b.HasIndex("Uid");
 
                     b.ToTable("PRODUCT");
-                });
-
-            modelBuilder.Entity("Smart_Farm.Models.PRODUCT_IMAGE", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("Pid")
-                        .HasColumnType("int");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Url")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Pid");
-
-                    b.ToTable("PRODUCT_IMAGE");
                 });
 
             modelBuilder.Entity("Smart_Farm.Models.REVIEW", b =>
@@ -797,6 +759,9 @@ namespace Smart_Farm.Migrations
                     b.Property<string>("PasswordHashed")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("PhotoUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Role")
                         .HasMaxLength(50)
@@ -1023,17 +988,6 @@ namespace Smart_Farm.Migrations
                     b.Navigation("UidNavigation");
                 });
 
-            modelBuilder.Entity("Smart_Farm.Models.PRODUCT_IMAGE", b =>
-                {
-                    b.HasOne("Smart_Farm.Models.PRODUCT", "PidNavigation")
-                        .WithMany("PRODUCT_IMAGEs")
-                        .HasForeignKey("Pid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("PidNavigation");
-                });
-
             modelBuilder.Entity("Smart_Farm.Models.REVIEW", b =>
                 {
                     b.HasOne("Smart_Farm.Models.PRODUCT", "PidNavigation")
@@ -1108,8 +1062,6 @@ namespace Smart_Farm.Migrations
             modelBuilder.Entity("Smart_Farm.Models.PRODUCT", b =>
                 {
                     b.Navigation("ORDERs");
-
-                    b.Navigation("PRODUCT_IMAGEs");
                 });
 
             modelBuilder.Entity("Smart_Farm.Models.SEASON", b =>

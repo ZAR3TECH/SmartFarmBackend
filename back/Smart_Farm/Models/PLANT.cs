@@ -13,6 +13,8 @@ public partial class PLANT
 {
     [Key]
     public int Pid { get; set; }
+    [Column(TypeName = "nvarchar(max)")]
+    public string PhotoUrl { get; set; }
 
     [StringLength(100)]
     public string Name { get; set; }

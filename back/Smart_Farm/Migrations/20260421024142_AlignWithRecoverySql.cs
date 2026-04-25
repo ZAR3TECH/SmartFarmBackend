@@ -19,8 +19,8 @@ namespace Smart_Farm.Migrations
                 IF COL_LENGTH(N'PRODUCT', N'Category') IS NULL
                     ALTER TABLE [PRODUCT] ADD [Category] nvarchar(max) NULL;
 
-                IF COL_LENGTH(N'PRODUCT', N'ImageUrl') IS NULL
-                    ALTER TABLE [PRODUCT] ADD [ImageUrl] nvarchar(max) NULL;
+                IF COL_LENGTH(N'PRODUCT', N'plant_image') IS NULL
+                    ALTER TABLE [PRODUCT] ADD [plant_image] nvarchar(max) NULL;
 
                 IF COL_LENGTH(N'PRODUCT', N'Rating') IS NULL
                     ALTER TABLE [PRODUCT] ADD [Rating] float NULL;

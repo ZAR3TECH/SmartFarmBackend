@@ -30,8 +30,6 @@ public class ProductRequestDto
     public int? Quantity { get; set; }
     public int? Cid { get; set; }
     public string? Category { get; set; }
-    public string? ImageUrl { get; set; }
-    public List<string>? ImageGallery { get; set; }
     public double? Rating { get; set; }
 }
 
@@ -45,8 +43,7 @@ public class ProductResponseDto
     public int? Uid { get; set; }
     public int? Cid { get; set; }
     public string? Category { get; set; }
-    public string? ImageUrl { get; set; }
-    public List<string>? ImageGallery { get; set; }
+
     public double? Rating { get; set; }
 }
 

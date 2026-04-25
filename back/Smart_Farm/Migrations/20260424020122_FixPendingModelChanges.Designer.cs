@@ -12,8 +12,8 @@ using Smart_Farm.Models;
 namespace Smart_Farm.Migrations
 {
     [DbContext(typeof(farContext))]
-    [Migration("20260421204536_RemoveBelongTo")]
-    partial class RemoveBelongTo
+    [Migration("20260424020122_FixPendingModelChanges")]
+    partial class FixPendingModelChanges
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -797,6 +797,10 @@ namespace Smart_Farm.Migrations
                     b.Property<string>("PasswordHashed")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("PhotoUrl")
+                        .HasMaxLength(200)
+                        .HasColumnType("nvarchar(200)");
 
                     b.Property<string>("Role")
                         .HasMaxLength(50)

@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 namespace Smart_Farm.Models;
 
@@ -31,16 +32,8 @@ public partial class PRODUCT
     [Column(TypeName = "nvarchar(max)")]
     public string Category { get; set; }
 
-    [Column(TypeName = "nvarchar(max)")]
-    public string ImageUrl { get; set; }
-
-    [Column(TypeName = "nvarchar(max)")]
-    public string ImageGalleryJson { get; set; }
-
     public double? Rating { get; set; }
 
-    [InverseProperty("PidNavigation")]
-    public virtual ICollection<PRODUCT_IMAGE> PRODUCT_IMAGEs { get; set; } = new List<PRODUCT_IMAGE>();
 
     [ForeignKey("Cid")]
     [InverseProperty("PRODUCTs")]

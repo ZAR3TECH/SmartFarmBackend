@@ -45,9 +45,7 @@ public class AIDiagnosisService(
             DiagnosisDate = DateOnly.FromDateTime(DateTime.UtcNow),
             Result = prediction.DiseaseName,
             Did = disease?.Did,
-            ImageBytes = bytes,
-            ImageContentType = image.ContentType,
-            ImageFileName = image.FileName
+            plant_image = null
         };
 
         await repository.AddAsync(diagnosis, cancellationToken);
@@ -66,7 +64,6 @@ public class AIDiagnosisService(
     {
         var report = await reportGenerator.GenerateArabicReportAsync(diagnoseResult, cancellationToken);
 
-        // Persist report against the diagnosis id when possible
         var entity = await repository.FindEntityByIdAsync(diagnoseResult.Id, cancellationToken);
         if (entity is not null)
         {
@@ -80,8 +77,7 @@ public class AIDiagnosisService(
     public async Task<bool> UpdateAsync(int id, UpdateAIDiagnosisRequestDto request, CancellationToken cancellationToken)
     {
         var existing = await repository.FindEntityByIdAsync(id, cancellationToken);
-        if (existing is null)
-            return false;
+        if (existing is null) return false;
 
         existing.DiagnosisDate = request.DiagnosisDate;
         existing.Result = request.Result;

@@ -650,7 +650,7 @@ namespace Smart_Farm.Migrations
                     b.Property<string>("ImageGalleryJson")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("ImageUrl")
+                    b.Property<string>("plant_image")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("Price")

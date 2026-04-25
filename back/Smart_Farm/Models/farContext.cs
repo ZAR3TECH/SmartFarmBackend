@@ -41,8 +41,6 @@ public partial class farContext : IdentityDbContext<AppUser, IdentityRole<int>, 
 
     public virtual DbSet<PRODUCT> PRODUCTs { get; set; }
 
-    public virtual DbSet<PRODUCT_IMAGE> PRODUCT_IMAGEs { get; set; }
-
     public virtual DbSet<REVIEW> REVIEWs { get; set; }
 
     public virtual DbSet<SEASON> SEASONs { get; set; }

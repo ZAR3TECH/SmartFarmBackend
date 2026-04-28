@@ -191,20 +191,12 @@ namespace Smart_Farm.Migrations
                     b.Property<string>("GeminiArabicReport")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<byte[]>("ImageBytes")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<string>("ImageContentType")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("ImageFileName")
-                        .HasMaxLength(260)
-                        .HasColumnType("nvarchar(260)");
-
                     b.Property<string>("Result")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("plant_image")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("ADid")
                         .HasName("PK__AI_Diagn__7931D1B8DEB8ED6F");
@@ -453,6 +445,9 @@ namespace Smart_Farm.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<int?>("PTid")
+                        .HasColumnType("int");
+
                     b.Property<int?>("Sis")
                         .HasColumnType("int");
 
@@ -463,6 +458,8 @@ namespace Smart_Farm.Migrations
                         .HasName("PK__IRRIGATI__C4962F8429AE39D0");
 
                     b.HasIndex("Cid");
+
+                    b.HasIndex("PTid");
 
                     b.HasIndex("Sis");
 
@@ -483,9 +480,15 @@ namespace Smart_Farm.Migrations
                     b.Property<string>("Description")
                         .HasColumnType("nvarchar(max)");
 
+                    b.Property<int?>("Duration_days")
+                        .HasColumnType("int");
+
                     b.Property<string>("Name_stage")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("PSid")
+                        .HasColumnType("int");
 
                     b.Property<int?>("Stage_order")
                         .HasColumnType("int");
@@ -494,6 +497,8 @@ namespace Smart_Farm.Migrations
                         .HasName("PK__IRRIGATI__CA1E5D78AA21B4A3");
 
                     b.HasIndex("Cid");
+
+                    b.HasIndex("PSid");
 
                     b.ToTable("IRRIGATION_STAGE");
                 });
@@ -573,6 +578,9 @@ namespace Smart_Farm.Migrations
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
 
+                    b.Property<string>("PhotoUrl")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<string>("Season")
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
@@ -599,6 +607,82 @@ namespace Smart_Farm.Migrations
                     b.ToTable("PLANT");
                 });
 
+            modelBuilder.Entity("Smart_Farm.Models.PLANT_IRRIGATION_TEMPLATE", b =>
+                {
+                    b.Property<int>("PTid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PTid"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<string>("Frequency_unit")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("nvarchar(20)");
+
+                    b.Property<int?>("Frequency_value")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Irrigation_name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("PSid")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Pid")
+                        .HasColumnType("int");
+
+                    b.Property<decimal?>("Water_amount")
+                        .HasColumnType("decimal(10, 2)");
+
+                    b.HasKey("PTid");
+
+                    b.HasIndex("PSid");
+
+                    b.HasIndex("Pid");
+
+                    b.ToTable("PLANT_IRRIGATION_TEMPLATE");
+                });
+
+            modelBuilder.Entity("Smart_Farm.Models.PLANT_STAGE", b =>
+                {
+                    b.Property<int>("PSid")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("int");
+
+                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("PSid"));
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("nvarchar(max)");
+
+                    b.Property<int>("Duration_days")
+                        .HasColumnType("int");
+
+                    b.Property<string>("Name_stage")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("nvarchar(100)");
+
+                    b.Property<int?>("Pid")
+                        .HasColumnType("int");
+
+                    b.Property<int?>("Stage_order")
+                        .HasColumnType("int");
+
+                    b.HasKey("PSid");
+
+                    b.HasIndex("Pid");
+
+                    b.ToTable("PLANT_STAGE");
+                });
+
             modelBuilder.Entity("Smart_Farm.Models.PRODUCT", b =>
                 {
                     b.Property<int>("Pid")
@@ -617,12 +701,6 @@ namespace Smart_Farm.Migrations
                         .HasColumnType("int");
 
                     b.Property<string>("Description")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ImageGalleryJson")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.Property<string>("ImageUrl")
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<decimal?>("Price")
@@ -645,30 +723,6 @@ namespace Smart_Farm.Migrations
                     b.HasIndex("Uid");
 
                     b.ToTable("PRODUCT");
-                });
-
-            modelBuilder.Entity("Smart_Farm.Models.PRODUCT_IMAGE", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("int");
-
-                    SqlServerPropertyBuilderExtensions.UseIdentityColumn(b.Property<int>("Id"));
-
-                    b.Property<int>("Pid")
-                        .HasColumnType("int");
-
-                    b.Property<int>("SortOrder")
-                        .HasColumnType("int");
-
-                    b.Property<string>("Url")
-                        .HasColumnType("nvarchar(max)");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("Pid");
-
-                    b.ToTable("PRODUCT_IMAGE");
                 });
 
             modelBuilder.Entity("Smart_Farm.Models.REVIEW", b =>
@@ -794,6 +848,9 @@ namespace Smart_Farm.Migrations
                     b.Property<string>("PasswordHashed")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("PhotoUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Role")
                         .HasMaxLength(50)
@@ -966,12 +1023,18 @@ namespace Smart_Farm.Migrations
                         .HasForeignKey("Cid")
                         .HasConstraintName("FK__IRRIGATION__Cid__628FA481");
 
+                    b.HasOne("Smart_Farm.Models.PLANT_IRRIGATION_TEMPLATE", "PTidNavigation")
+                        .WithMany("IRRIGATIONs")
+                        .HasForeignKey("PTid");
+
                     b.HasOne("Smart_Farm.Models.IRRIGATION_STAGE", "SisNavigation")
                         .WithMany("IRRIGATIONs")
                         .HasForeignKey("Sis")
                         .HasConstraintName("FK__IRRIGATION__Sis__619B8048");
 
                     b.Navigation("CidNavigation");
+
+                    b.Navigation("PTidNavigation");
 
                     b.Navigation("SisNavigation");
                 });
@@ -983,7 +1046,13 @@ namespace Smart_Farm.Migrations
                         .HasForeignKey("Cid")
                         .HasConstraintName("FK__IRRIGATION___Cid__5EBF139D");
 
+                    b.HasOne("Smart_Farm.Models.PLANT_STAGE", "PSidNavigation")
+                        .WithMany("IRRIGATION_STAGEs")
+                        .HasForeignKey("PSid");
+
                     b.Navigation("CidNavigation");
+
+                    b.Navigation("PSidNavigation");
                 });
 
             modelBuilder.Entity("Smart_Farm.Models.ORDER", b =>
@@ -1003,6 +1072,30 @@ namespace Smart_Farm.Migrations
                     b.Navigation("UidNavigation");
                 });
 
+            modelBuilder.Entity("Smart_Farm.Models.PLANT_IRRIGATION_TEMPLATE", b =>
+                {
+                    b.HasOne("Smart_Farm.Models.PLANT_STAGE", "PSidNavigation")
+                        .WithMany("PLANT_IRRIGATION_TEMPLATEs")
+                        .HasForeignKey("PSid");
+
+                    b.HasOne("Smart_Farm.Models.PLANT", "PidNavigation")
+                        .WithMany("PLANT_IRRIGATION_TEMPLATEs")
+                        .HasForeignKey("Pid");
+
+                    b.Navigation("PSidNavigation");
+
+                    b.Navigation("PidNavigation");
+                });
+
+            modelBuilder.Entity("Smart_Farm.Models.PLANT_STAGE", b =>
+                {
+                    b.HasOne("Smart_Farm.Models.PLANT", "PidNavigation")
+                        .WithMany("PLANT_STAGEs")
+                        .HasForeignKey("Pid");
+
+                    b.Navigation("PidNavigation");
+                });
+
             modelBuilder.Entity("Smart_Farm.Models.PRODUCT", b =>
                 {
                     b.HasOne("Smart_Farm.Models.CROP", "CidNavigation")
@@ -1018,17 +1111,6 @@ namespace Smart_Farm.Migrations
                     b.Navigation("CidNavigation");
 
                     b.Navigation("UidNavigation");
-                });
-
-            modelBuilder.Entity("Smart_Farm.Models.PRODUCT_IMAGE", b =>
-                {
-                    b.HasOne("Smart_Farm.Models.PRODUCT", "PidNavigation")
-                        .WithMany("PRODUCT_IMAGEs")
-                        .HasForeignKey("Pid")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("PidNavigation");
                 });
 
             modelBuilder.Entity("Smart_Farm.Models.REVIEW", b =>
@@ -1100,13 +1182,27 @@ namespace Smart_Farm.Migrations
                     b.Navigation("CROPs");
 
                     b.Navigation("GROWS_INs");
+
+                    b.Navigation("PLANT_IRRIGATION_TEMPLATEs");
+
+                    b.Navigation("PLANT_STAGEs");
+                });
+
+            modelBuilder.Entity("Smart_Farm.Models.PLANT_IRRIGATION_TEMPLATE", b =>
+                {
+                    b.Navigation("IRRIGATIONs");
+                });
+
+            modelBuilder.Entity("Smart_Farm.Models.PLANT_STAGE", b =>
+                {
+                    b.Navigation("IRRIGATION_STAGEs");
+
+                    b.Navigation("PLANT_IRRIGATION_TEMPLATEs");
                 });
 
             modelBuilder.Entity("Smart_Farm.Models.PRODUCT", b =>
                 {
                     b.Navigation("ORDERs");
-
-                    b.Navigation("PRODUCT_IMAGEs");
                 });
 
             modelBuilder.Entity("Smart_Farm.Models.SEASON", b =>

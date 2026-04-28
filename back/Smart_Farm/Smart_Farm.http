@@ -1,6 +1,0 @@
-@Smart_Farm_HostAddress = http://localhost:5043
-Send request | Debug
-GET {{Smart_Farm_HostAddress}}/weatherforecast/
-Accept: application/json
-
-###

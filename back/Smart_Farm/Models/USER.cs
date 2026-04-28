@@ -55,4 +55,7 @@ public partial class USER
 
     [InverseProperty("UidNavigation")]
     public virtual ICollection<USER_PHONE> USER_PHONEs { get; set; } = new List<USER_PHONE>();
+    [Column(TypeName = "nvarchar(max)")]
+    public string PhotoUrl { get; set; }
+
 }

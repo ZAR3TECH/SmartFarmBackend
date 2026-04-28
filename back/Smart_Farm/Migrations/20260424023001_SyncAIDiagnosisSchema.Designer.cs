@@ -12,8 +12,8 @@ using Smart_Farm.Models;
 namespace Smart_Farm.Migrations
 {
     [DbContext(typeof(farContext))]
-    [Migration("20260421204536_RemoveBelongTo")]
-    partial class RemoveBelongTo
+    [Migration("20260424023001_SyncAIDiagnosisSchema")]
+    partial class SyncAIDiagnosisSchema
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -194,20 +194,12 @@ namespace Smart_Farm.Migrations
                     b.Property<string>("GeminiArabicReport")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<byte[]>("ImageBytes")
-                        .HasColumnType("varbinary(max)");
-
-                    b.Property<string>("ImageContentType")
-                        .HasMaxLength(100)
-                        .HasColumnType("nvarchar(100)");
-
-                    b.Property<string>("ImageFileName")
-                        .HasMaxLength(260)
-                        .HasColumnType("nvarchar(260)");
-
                     b.Property<string>("Result")
                         .HasMaxLength(100)
                         .HasColumnType("nvarchar(100)");
+
+                    b.Property<string>("plant_image")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("ADid")
                         .HasName("PK__AI_Diagn__7931D1B8DEB8ED6F");
@@ -625,9 +617,6 @@ namespace Smart_Farm.Migrations
                     b.Property<string>("ImageGalleryJson")
                         .HasColumnType("nvarchar(max)");
 
-                    b.Property<string>("plant_image")
-                        .HasColumnType("nvarchar(max)");
-
                     b.Property<decimal?>("Price")
                         .HasColumnType("decimal(10, 2)");
 
@@ -639,6 +628,9 @@ namespace Smart_Farm.Migrations
 
                     b.Property<int?>("Uid")
                         .HasColumnType("int");
+
+                    b.Property<string>("plant_image")
+                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Pid")
                         .HasName("PK__PRODUCT__C5705938F6FC9017");
@@ -661,11 +653,11 @@ namespace Smart_Farm.Migrations
                     b.Property<int>("Pid")
                         .HasColumnType("int");
 
+                    b.Property<string>("Product_image")
+                        .HasColumnType("nvarchar(max)");
+
                     b.Property<int>("SortOrder")
                         .HasColumnType("int");
-
-                    b.Property<string>("Url")
-                        .HasColumnType("nvarchar(max)");
 
                     b.HasKey("Id");
 
@@ -797,6 +789,9 @@ namespace Smart_Farm.Migrations
                     b.Property<string>("PasswordHashed")
                         .HasMaxLength(64)
                         .HasColumnType("nvarchar(64)");
+
+                    b.Property<string>("PhotoUrl")
+                        .HasColumnType("nvarchar(max)");
 
                     b.Property<string>("Role")
                         .HasMaxLength(50)

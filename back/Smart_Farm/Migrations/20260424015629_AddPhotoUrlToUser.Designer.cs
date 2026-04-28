@@ -12,8 +12,8 @@ using Smart_Farm.Models;
 namespace Smart_Farm.Migrations
 {
     [DbContext(typeof(farContext))]
-    [Migration("20260421204536_RemoveBelongTo")]
-    partial class RemoveBelongTo
+    [Migration("20260424015629_AddPhotoUrlToUser")]
+    partial class AddPhotoUrlToUser
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)

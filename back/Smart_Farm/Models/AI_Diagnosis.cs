@@ -13,32 +13,18 @@ public partial class AI_Diagnosis
 {
     [Key]
     public int ADid { get; set; }
-
     public DateOnly? DiagnosisDate { get; set; }
-
     [StringLength(100)]
     public string Result { get; set; }
-
     public int? Did { get; set; }
-
     public int? Cid { get; set; }
-
-    [Column(TypeName = "varbinary(max)")]
-    public byte[] ImageBytes { get; set; }
-
-    [StringLength(100)]
-    public string ImageContentType { get; set; }
-
-    [StringLength(260)]
-    public string ImageFileName { get; set; }
-
+    [Column(TypeName = "nvarchar(max)")] 
+    public string plant_image { get; set; }
     [Column(TypeName = "nvarchar(max)")]
     public string GeminiArabicReport { get; set; }
-
     [ForeignKey("Cid")]
     [InverseProperty("AI_Diagnoses")]
     public virtual CROP CidNavigation { get; set; }
-
     [ForeignKey("Did")]
     [InverseProperty("AI_Diagnoses")]
     public virtual Disease DidNavigation { get; set; }

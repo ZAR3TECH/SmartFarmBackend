@@ -13,6 +13,7 @@ public class UserDto
     public required string Role { get; set; }
 
     public required List<string> Phones { get; set; }
+    public string? PhotoUrl { get; set; }
 }
 
 public class CropDto

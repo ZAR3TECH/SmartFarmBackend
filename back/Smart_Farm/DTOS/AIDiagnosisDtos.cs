@@ -8,6 +8,7 @@ public class AIDiagnosisResponseDto
     public int? Did { get; set; }
     public int? Cid { get; set; }
     public string? DiseaseName { get; set; }
+    public string? plant_image { get; set; }  
 }
 
 public class UpdateAIDiagnosisRequestDto
@@ -24,4 +25,5 @@ public class DiagnoseResultDto
     public required string Disease { get; set; }
     public double Confidence { get; set; }
     public bool Saved { get; set; }
+    public string? plant_image { get; set; }
 }

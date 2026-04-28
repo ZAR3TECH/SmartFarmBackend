@@ -33,7 +33,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
 // ===================== SERVICES =====================
 
 builder.Services.AddControllers();
-
+builder.Services.AddSingleton<CloudinaryService>();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen(options =>
 {

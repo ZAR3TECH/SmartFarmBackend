@@ -3,6 +3,7 @@ using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Metadata;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Smart_Farm.Models;
 
@@ -11,9 +12,11 @@ using Smart_Farm.Models;
 namespace Smart_Farm.Migrations
 {
     [DbContext(typeof(farContext))]
-    partial class farContextModelSnapshot : ModelSnapshot
+    [Migration("20260528170346_RemoveProductCidRelation")]
+    partial class RemoveProductCidRelation
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -829,6 +832,9 @@ namespace Smart_Farm.Migrations
                         .HasMaxLength(50)
                         .HasColumnType("nvarchar(50)");
 
+                    b.Property<int?>("Cid")
+                        .HasColumnType("int");
+
                     b.Property<DateTime>("CreatedAt")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("datetime2")
@@ -853,6 +859,8 @@ namespace Smart_Farm.Migrations
                         .HasName("PK__PRODUCT__C5705938F6FC9017");
 
                     b.HasIndex("Category");
+
+                    b.HasIndex("Cid");
 
                     b.HasIndex("Uid");
 
@@ -1261,10 +1269,17 @@ namespace Smart_Farm.Migrations
 
             modelBuilder.Entity("Smart_Farm.Models.PRODUCT", b =>
                 {
+                    b.HasOne("Smart_Farm.Models.CROP", "CidNavigation")
+                        .WithMany("PRODUCTs")
+                        .HasForeignKey("Cid")
+                        .HasConstraintName("FK__PRODUCT__Cid__46E78A0C");
+
                     b.HasOne("Smart_Farm.Models.USER", "UidNavigation")
                         .WithMany("PRODUCTs")
                         .HasForeignKey("Uid")
                         .HasConstraintName("FK__PRODUCT__Uid__45F365D3");
+
+                    b.Navigation("CidNavigation");
 
                     b.Navigation("UidNavigation");
                 });
@@ -1312,6 +1327,8 @@ namespace Smart_Farm.Migrations
                     b.Navigation("IRRIGATION_STAGEs");
 
                     b.Navigation("IRRIGATIONs");
+
+                    b.Navigation("PRODUCTs");
 
                     b.Navigation("WaterBalanceLogs");
                 });

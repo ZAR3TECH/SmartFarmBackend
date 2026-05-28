@@ -1,188 +1,190 @@
 ﻿using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Smart_Farm.DTOS;
 using Smart_Farm.Infrastructure.Security;
 using Smart_Farm.Models;
-using Microsoft.EntityFrameworkCore;
 
-namespace Smart_Farm.Controllers
+namespace Smart_Farm.Controllers;
+
+[Authorize]
+[ApiController]
+[Route("api/[controller]")]
+public class ProductController(farContext db) : ControllerBase
 {
-    [Authorize]
-    [Route("api/[controller]")]
-    [ApiController]
-    public class productController : ControllerBase
+    private readonly farContext _db = db;
+
+    // GET: api/product
+    [HttpGet]
+    public async Task<ActionResult> GetAll(
+        [FromQuery] string? category,
+        [FromQuery] double? minPrice,
+        [FromQuery] double? maxPrice,
+        [FromQuery] double? minRating,
+        [FromQuery] string? city)
     {
-        farContext db;
+        var query = _db.PRODUCTs.AsQueryable();
 
-        public productController(farContext db)
-        {
-            this.db = db;
-        }
+        if (!string.IsNullOrWhiteSpace(category))
+            query = query.Where(p => p.Category == category);
 
-        // ─── GET api/product ─────────────────────────────────────────────────
-        [HttpGet]
-        public ActionResult GetAll(
-            [FromQuery] string? category,
-            [FromQuery] double? minPrice,
-            [FromQuery] double? maxPrice,
-            [FromQuery] double? minRating,
-            [FromQuery] string? city)
-        {
-            var query = db.PRODUCTs.AsQueryable();
+        if (minPrice.HasValue)
+            query = query.Where(p => p.Price != null && (double)p.Price >= minPrice.Value);
 
-            if (!string.IsNullOrWhiteSpace(category))
-                query = query.Where(p => p.Category == category);
-            if (minPrice.HasValue)
-                query = query.Where(p => p.Price != null && (double)p.Price >= minPrice.Value);
-            if (maxPrice.HasValue)
-                query = query.Where(p => p.Price != null && (double)p.Price <= maxPrice.Value);
-            if (minRating.HasValue)
-                query = query.Where(p => p.Rating != null && p.Rating >= minRating.Value);
-            if (!string.IsNullOrWhiteSpace(city))
-                query = query.Where(p => p.UidNavigation != null && p.UidNavigation.City_name == city);
+        if (maxPrice.HasValue)
+            query = query.Where(p => p.Price != null && (double)p.Price <= maxPrice.Value);
 
-            var products = query
-                .AsNoTracking()
-                .Select(p => new ProductResponseDto
-                {
-                    Pid = p.Pid,
-                    Description = p.Description,
-                    Price = p.Price,
-                    Added_date = p.Added_date,
-                    Quantity = p.Quantity,
-                    Uid = p.Uid,
-                    Cid = p.Cid,
-                    Category = p.Category,
-                    Rating = p.Rating,
-                })
-                .ToList();
+        if (minRating.HasValue)
+            query = query.Where(p => p.Rating != null && p.Rating >= minRating.Value);
 
-            return Ok(products);
-        }
+        if (!string.IsNullOrWhiteSpace(city))
+            query = query.Where(p => p.UidNavigation != null && p.UidNavigation.City_name == city);
 
-        // ─── GET api/product/me ──────────────────────────────────────────────
-        [HttpGet("me")]
-        public ActionResult GetMine()
-        {
-            var uid = UserClaims.RequireUid(User);
-
-            var items = db.PRODUCTs
-                .AsNoTracking()
-                .Where(p => p.Uid == uid)
-                .Select(p => new ProductResponseDto
-                {
-                    Pid = p.Pid,
-                    Description = p.Description,
-                    Price = p.Price,
-                    Added_date = p.Added_date,
-                    Quantity = p.Quantity,
-                    Uid = p.Uid,
-                    Cid = p.Cid,
-                    Category = p.Category,
-                    Rating = p.Rating,
-                })
-                .ToList();
-
-            return Ok(items);
-        }
-
-        // ─── GET api/product/{id} ────────────────────────────────────────────
-        [HttpGet("{id}")]
-        public ActionResult GetById(int id)
-        {
-            PRODUCT? b = db.PRODUCTs.Find(id);
-            if (b == null) return NotFound();
-
-            return Ok(new ProductResponseDto
+        var products = await query
+            .AsNoTracking()
+            .Select(p => new ProductResponseDto
             {
-                Pid = b.Pid,
-                Description = b.Description,
-                Price = b.Price,
-                Added_date = b.Added_date,
-                Quantity = b.Quantity,
-                Uid = b.Uid,
-                Cid = b.Cid,
-                Category = b.Category,
-                Rating = b.Rating,
-            });
-        }
+                Pid = p.Pid,
+                Description = p.Description,
+                Price = p.Price,
+                Added_date = p.Added_date,
+                Quantity = p.Quantity,
+                Uid = p.Uid,
+                Category = p.Category,
+                Rating = p.Rating
+            })
+            .ToListAsync();
 
-        // ─── POST api/product ────────────────────────────────────────────────
-        [HttpPost]
-        public ActionResult Post(ProductRequestDto b)
-        {
-            var uid = UserClaims.RequireUid(User);
-            if (b == null) return BadRequest("product is null");
-            if (!ModelState.IsValid) return BadRequest();
+        return Ok(products);
+    }
 
-            var entity = new PRODUCT
+    // GET: api/product/me
+    [HttpGet("me")]
+    public async Task<ActionResult> GetMine()
+    {
+        var uid = UserClaims.RequireUid(User);
+
+        var items = await _db.PRODUCTs
+            .AsNoTracking()
+            .Where(p => p.Uid == uid)
+            .Select(p => new ProductResponseDto
             {
-                Description = b.Description,
-                Price = b.Price,
-                Added_date = b.Added_date,
-                Quantity = b.Quantity,
-                Uid = uid,
-                Cid = b.Cid,
-                Category = b.Category,
-                Rating = b.Rating,
-                CreatedAt = DateTime.UtcNow
-            };
-            db.PRODUCTs.Add(entity);
-            db.SaveChanges();
+                Pid = p.Pid,
+                Description = p.Description,
+                Price = p.Price,
+                Added_date = p.Added_date,
+                Quantity = p.Quantity,
+                Uid = p.Uid,
+                Category = p.Category,
+                Rating = p.Rating
+            })
+            .ToListAsync();
 
-            return CreatedAtAction(nameof(GetById), new { id = entity.Pid }, new ProductResponseDto
-            {
-                Pid = entity.Pid,
-                Description = entity.Description,
-                Price = entity.Price,
-                Added_date = entity.Added_date,
-                Quantity = entity.Quantity,
-                Uid = entity.Uid,
-                Cid = entity.Cid,
-                Category = entity.Category,
-                Rating = entity.Rating
-            });
-        }
+        return Ok(items);
+    }
 
-        // ─── PUT api/product/{id} ────────────────────────────────────────────
-        [HttpPut("{id}")]
-        public ActionResult Edit(ProductRequestDto b, int id)
+    // GET: api/product/{id}
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult> GetById(int id)
+    {
+        var product = await _db.PRODUCTs
+            .AsNoTracking()
+            .FirstOrDefaultAsync(p => p.Pid == id);
+
+        if (product == null)
+            return NotFound();
+
+        return Ok(new ProductResponseDto
         {
-            var uid = UserClaims.RequireUid(User);
-            if (b == null) return BadRequest("product is null");
+            Pid = product.Pid,
+            Description = product.Description,
+            Price = product.Price,
+            Added_date = product.Added_date,
+            Quantity = product.Quantity,
+            Uid = product.Uid,
+            Category = product.Category,
+            Rating = product.Rating
+        });
+    }
 
-            var entity = db.PRODUCTs.Find(id);
-            if (entity == null) return NotFound();
-            if (entity.Uid != uid) return Forbid();
+    // POST: api/product
+    [HttpPost]
+    public async Task<ActionResult> Create(ProductRequestDto dto)
+    {
+        var uid = UserClaims.RequireUid(User);
 
-            entity.Description = b.Description;
-            entity.Price = b.Price;
-            entity.Added_date = b.Added_date;
-            entity.Quantity = b.Quantity;
-            entity.Cid = b.Cid;
-            entity.Category = b.Category;
-            entity.Rating = b.Rating;
-
-            db.SaveChanges();
-            return NoContent();
-        }
-
-        // ─── DELETE api/product/{id} ─────────────────────────────────────────
-        [HttpDelete("{id}")]
-        public async Task<ActionResult> Delete(int id, CancellationToken cancellationToken)
+        var entity = new PRODUCT
         {
-            var uid = UserClaims.RequireUid(User);
+            Description = dto.Description,
+            Price = dto.Price,
+            Added_date = dto.Added_date,
+            Quantity = dto.Quantity,
+            Uid = uid,
+            Category = dto.Category,
+            Rating = dto.Rating,
+            CreatedAt = DateTime.UtcNow
+        };
 
-            var entity = await db.PRODUCTs
-                .FirstOrDefaultAsync(p => p.Pid == id, cancellationToken);
+        _db.PRODUCTs.Add(entity);
+        await _db.SaveChangesAsync();
 
-            if (entity == null) return NotFound();
-            if (entity.Uid != uid) return Forbid();
+        return CreatedAtAction(nameof(GetById), new { id = entity.Pid }, new ProductResponseDto
+        {
+            Pid = entity.Pid,
+            Description = entity.Description,
+            Price = entity.Price,
+            Added_date = entity.Added_date,
+            Quantity = entity.Quantity,
+            Uid = entity.Uid,
+            Category = entity.Category,
+            Rating = entity.Rating
+        });
+    }
 
-            db.PRODUCTs.Remove(entity);
-            await db.SaveChangesAsync(cancellationToken);
+    // PUT: api/product/{id}
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult> Update(int id, ProductRequestDto dto)
+    {
+        var uid = UserClaims.RequireUid(User);
 
-            return Ok(new { id = entity.Pid, deleted = true });
-        }
+        var entity = await _db.PRODUCTs.FirstOrDefaultAsync(p => p.Pid == id);
+
+        if (entity == null)
+            return NotFound();
+
+        if (entity.Uid != uid)
+            return Forbid();
+
+        entity.Description = dto.Description;
+        entity.Price = dto.Price;
+        entity.Added_date = dto.Added_date;
+        entity.Quantity = dto.Quantity;
+        entity.Category = dto.Category;
+        entity.Rating = dto.Rating;
+
+        await _db.SaveChangesAsync();
+
+        return NoContent();
+    }
+
+    // DELETE: api/product/{id}
+    [HttpDelete("{id:int}")]
+    public async Task<ActionResult> Delete(int id)
+    {
+        var uid = UserClaims.RequireUid(User);
+
+        var entity = await _db.PRODUCTs
+            .FirstOrDefaultAsync(p => p.Pid == id);
+
+        if (entity == null)
+            return NotFound();
+
+        if (entity.Uid != uid)
+            return Forbid();
+
+        _db.PRODUCTs.Remove(entity);
+        await _db.SaveChangesAsync();
+
+        return Ok(new { id, deleted = true });
     }
 }

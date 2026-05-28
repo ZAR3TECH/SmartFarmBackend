@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
+using Smart_Farm.Application.Abstractions;
 using Smart_Farm.DTOS;
 using Smart_Farm.Infrastructure.Security;
 using Smart_Farm.Models;
@@ -19,11 +20,13 @@ namespace Smart_Farm.Controllers
         farContext db;
         private readonly UserManager<AppUser> _userManager;
         private readonly Cloudinary _cloudinary;
+        private readonly ILocationGeocodingService _geocoding;
 
-        public userController(farContext db, UserManager<AppUser> userManager, IConfiguration configuration)
+        public userController(farContext db, UserManager<AppUser> userManager, IConfiguration configuration, ILocationGeocodingService geocoding)
         {
             this.db = db;
             _userManager = userManager;
+            _geocoding = geocoding;
 
             var cloudName = configuration["Cloudinary:CloudName"];
             var apiKey = configuration["Cloudinary:ApiKey"];
@@ -50,13 +53,43 @@ namespace Smart_Farm.Controllers
             if (domain is null) return NotFound();
 
             domain.First_name = b.First_name;
-            domain.Last_name = b.Last_name;
-            domain.Email = b.Email;
-            domain.Address_line = b.Address_line;
-            domain.City_name = b.City_name;
-            domain.Latitude = b.Latitude;
-            domain.Longitude = b.Longitude;
-            domain.Role = b.Role;
+            domain.Last_name  = b.Last_name;
+            domain.Email      = b.Email;
+            domain.Role       = b.Role;
+
+            decimal? lat = (b.Latitude == 0 || b.Latitude is null) ? null : b.Latitude;
+            decimal? lng = (b.Longitude == 0 || b.Longitude is null) ? null : b.Longitude;
+            string? cityName    = b.City_name;
+            string? addressLine = b.Address_line;
+
+            LocationLookupResult? lookup = null;
+
+            if (lat.HasValue && lng.HasValue)
+            {
+                // Reverse geocode: lat/lng → city + address
+                lookup = await _geocoding.ReverseAsync((double)lat.Value, (double)lng.Value, cancellationToken);
+            }
+            else
+            {
+                // Forward geocode: city + address → lat/lng
+                var query = string.Join(" ", new[] { b.City_name, b.Address_line }
+                    .Where(s => !string.IsNullOrWhiteSpace(s)));
+                if (!string.IsNullOrWhiteSpace(query))
+                    lookup = await _geocoding.ForwardAsync(query, cancellationToken);
+            }
+
+            if (lookup is not null)
+            {
+                lat ??= (decimal?)lookup.Latitude;
+                lng ??= (decimal?)lookup.Longitude;
+                if (string.IsNullOrWhiteSpace(cityName))    cityName    = lookup.City ?? lookup.Governorate;
+                if (string.IsNullOrWhiteSpace(addressLine)) addressLine = lookup.AddressLine ?? lookup.DisplayName;
+            }
+
+            domain.Latitude    = lat         ?? domain.Latitude;
+            domain.Longitude   = lng         ?? domain.Longitude;
+            domain.City_name   = cityName    ?? domain.City_name;
+            domain.Address_line = addressLine ?? domain.Address_line;
 
             if (b.Phones is not null)
             {

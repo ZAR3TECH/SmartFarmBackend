@@ -1,6 +1,9 @@
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Smart_Farm.Application.Abstractions;
+using Smart_Farm.Infrastructure.Security;
+using Smart_Farm.Models;
 
 namespace Smart_Farm.Controllers;
 
@@ -10,10 +13,12 @@ namespace Smart_Farm.Controllers;
 public class IrrigationRecommendationController : ControllerBase
 {
     private readonly IWaterBalanceService _service;
+    private readonly farContext _db;
 
-    public IrrigationRecommendationController(IWaterBalanceService service)
+    public IrrigationRecommendationController(IWaterBalanceService service, farContext db)
     {
         _service = service;
+        _db = db;
     }
 
     /// <summary>
@@ -29,6 +34,12 @@ public class IrrigationRecommendationController : ControllerBase
         [FromQuery] bool persist = false,
         CancellationToken cancellationToken = default)
     {
+        var uid = UserClaims.RequireUid(User);
+
+        var crop = await _db.CROPs.FirstOrDefaultAsync(c => c.Cid == cid, cancellationToken);
+        if (crop is null) return NotFound();
+        if (crop.Uid != uid) return Forbid();
+
         var target = date ?? DateOnly.FromDateTime(DateTime.UtcNow);
 
         try

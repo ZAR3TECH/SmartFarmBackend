@@ -48,7 +48,9 @@ public class FarmController : ControllerBase
         {
             lookup = await _locationGeocodingService.ForwardAsync(dto.LocationQuery!, ct);
         }
-        else if (dto.Latitude.HasValue && dto.Longitude.HasValue)
+
+        // Fallback to ReverseAsync if locationQuery failed or wasn't provided but lat/lng are available
+        if (lookup is null && dto.Latitude.HasValue && dto.Longitude.HasValue)
         {
             lookup = await _locationGeocodingService.ReverseAsync((double)dto.Latitude.Value, (double)dto.Longitude.Value, ct);
         }

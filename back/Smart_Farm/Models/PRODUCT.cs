@@ -27,7 +27,6 @@ public partial class PRODUCT
 
     public int? Uid { get; set; }
 
-    public int? Cid { get; set; }
 
     [StringLength(50)]
     public string Category { get; set; }
@@ -37,9 +36,6 @@ public partial class PRODUCT
     public DateTime CreatedAt { get; set; }
 
 
-    [ForeignKey("Cid")]
-    [InverseProperty("PRODUCTs")]
-    public virtual CROP CidNavigation { get; set; }
 
     [InverseProperty("PidNavigation")]
     public virtual ICollection<ORDER> ORDERs { get; set; } = new List<ORDER>();

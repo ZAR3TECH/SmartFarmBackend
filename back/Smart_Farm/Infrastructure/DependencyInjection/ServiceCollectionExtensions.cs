@@ -1,5 +1,6 @@
 using Smart_Farm.Application.Abstractions;
 using Smart_Farm.Application.Services;
+using Smart_Farm.Infrastructure.BackgroundServices;
 using Smart_Farm.Infrastructure.External;
 using Smart_Farm.Infrastructure.Persistence;
 
@@ -23,6 +24,7 @@ public static class ServiceCollectionExtensions
         services.AddHttpClient("Nominatim");
         services.AddScoped<ILocationGeocodingService, NominatimLocationGeocodingService>();
         services.AddScoped<IWeatherProvider, OpenMeteoWeatherProvider>();
+        services.AddHostedService<WeatherTaskGeneratorService>();
         return services;
     }
 }

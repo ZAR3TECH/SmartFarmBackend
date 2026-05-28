@@ -1,204 +1,236 @@
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
 using Smart_Farm.DTOS;
 using Smart_Farm.Infrastructure.Security;
 using Smart_Farm.Models;
 
-namespace Smart_Farm.Controllers
+namespace Smart_Farm.Controllers;
+
+[Authorize]
+[ApiController]
+[Route("api/[controller]")]
+public class CropController(farContext db) : ControllerBase
 {
-    [Authorize]
-    [Route("api/[controller]")]
-    [ApiController]
-    public class cropController : ControllerBase
+    private readonly farContext _db = db;
+
+    // ????????????? GET mine ?????????????
+    [HttpGet]
+    public async Task<ActionResult> GetMine()
     {
-        farContext db;
+        var uid = UserClaims.RequireUid(User);
 
-        public cropController(farContext db)
-        {
-            this.db = db;
-        }
-
-        [HttpGet]
-        public ActionResult GetMine()
-        {
-            var uid = UserClaims.RequireUid(User);
-
-            var items = db.CROPs
-                .Where(c => c.Uid == uid)
-                .Select(c => new CropResponseDto
-                {
-                    Cid = c.Cid,
-                    FarmId = c.FarmId,
-                    Pid = c.Pid,
-                    Notes = c.Notes,
-                    Area_size = c.Area_size,
-                    Start_date = c.Start_date,
-                    Soil_type = c.Soil_type,
-                    Current_Stage = c.Current_Stage,
-                    Uid = c.Uid
-                })
-                .ToList();
-
-            return Ok(items);
-        }
-
-        //get by id
-        [HttpGet("{id}")]
-        public ActionResult getbyid(int id)
-        {
-            var uid = UserClaims.RequireUid(User);
-            CROP? b = db.CROPs.Find(id);
-
-            if (b == null) return NotFound();
-            if (b.Uid != uid) return Forbid();
-            return Ok(new CropResponseDto
+        var items = await _db.CROPs
+            .AsNoTracking()
+            .Where(c => c.Uid == uid)
+            .Select(c => new CropResponseDto
             {
-                Cid = b.Cid,
-                FarmId = b.FarmId,
-                Pid = b.Pid,
-                Notes = b.Notes,
-                Area_size = b.Area_size,
-                Start_date = b.Start_date,
-                Soil_type = b.Soil_type,
-                Current_Stage = b.Current_Stage,
-                Uid = b.Uid
-            });
-        }
+                Cid = c.Cid,
+                FarmId = c.FarmId,
+                Pid = c.Pid,
+                Notes = c.Notes,
+                Area_size = c.Area_size,
+                Start_date = c.Start_date,
+                Soil_type = c.Soil_type,
+                Current_Stage = c.Current_Stage,
+                Uid = c.Uid
+            })
+            .ToListAsync();
 
-        //Edit
+        return Ok(items);
+    }
 
-        //DELETE
-        [HttpDelete("{id}")]
-        public ActionResult Delete(int id)
+    // ????????????? GET by id ?????????????
+    [HttpGet("{id:int}")]
+    public async Task<ActionResult> GetById(int id)
+    {
+        var uid = UserClaims.RequireUid(User);
+
+        var crop = await _db.CROPs
+            .AsNoTracking()
+            .FirstOrDefaultAsync(c => c.Cid == id);
+
+        if (crop is null)
+            return NotFound();
+
+        if (crop.Uid != uid)
+            return Forbid();
+
+        return Ok(new CropResponseDto
         {
-            var uid = UserClaims.RequireUid(User);
+            Cid = crop.Cid,
+            FarmId = crop.FarmId,
+            Pid = crop.Pid,
+            Notes = crop.Notes,
+            Area_size = crop.Area_size,
+            Start_date = crop.Start_date,
+            Soil_type = crop.Soil_type,
+            Current_Stage = crop.Current_Stage,
+            Uid = crop.Uid
+        });
+    }
 
-            CROP? b = db.CROPs.Find(id);
-            if (b == null) return NotFound();
-            if (b.Uid != uid) return Forbid();
-            db.CROPs.Remove(b);
-            db.SaveChanges();
-            return Ok(new { id = b.Cid, deleted = true });
+    // ????????????? POST ?????????????
+    [HttpPost]
+    public async Task<ActionResult> Create(CropRequestDto dto, CancellationToken ct)
+    {
+        var uid = UserClaims.RequireUid(User);
 
+        if (dto is null)
+            return BadRequest("Crop is null");
 
-        }
-        // add
-        [HttpPost]
-        public ActionResult post(CropRequestDto b)
+        if (!dto.Pid.HasValue)
+            return BadRequest("Pid is required");
+
+        if (!dto.FarmId.HasValue)
+            return BadRequest("FarmId is required");
+
+        var plantExists = await _db.PLANTs.AnyAsync(p => p.Pid == dto.Pid.Value, ct);
+        if (!plantExists)
+            return BadRequest("Plant not found");
+
+        var farm = await _db.FARMs.FirstOrDefaultAsync(f => f.FarmId == dto.FarmId.Value, ct);
+        if (farm is null)
+            return BadRequest("Farm not found");
+
+        if (farm.Uid != uid)
+            return Forbid();
+
+        var entity = new CROP
         {
-            var uid = UserClaims.RequireUid(User);
+            Pid = dto.Pid,
+            FarmId = dto.FarmId,
+            Notes = dto.Notes,
+            Area_size = dto.Area_size,
+            Start_date = dto.Start_date,
+            Soil_type = farm.Default_Soil_type,
+            Current_Stage = dto.Current_Stage,
+            Uid = uid,
+            CreatedAt = DateTime.UtcNow
+        };
 
-            if (b == null) return BadRequest("Tasks is null");
-            if (!ModelState.IsValid) return BadRequest();
-            if (!b.Pid.HasValue) return BadRequest("Pid (plant id) is required.");
-            if (!db.PLANTs.Any(p => p.Pid == b.Pid.Value)) return BadRequest("Plant not found.");
-            if (!b.FarmId.HasValue) return BadRequest("FarmId is required.");
-            var farm = db.FARMs.Find(b.FarmId.Value);
-            if (farm is null) return BadRequest("Farm not found.");
-            if (farm.Uid != uid) return Forbid();
-            var entity = new CROP
-            {
-                Pid = b.Pid,
-                FarmId = b.FarmId,
-                Notes = b.Notes,
-                Area_size = b.Area_size,
-                Start_date = b.Start_date,
-                // Inherited from the farm — user doesn't supply these on the crop.
-                Soil_type = farm.Default_Soil_type,
-                Current_Stage = b.Current_Stage,
-                Uid = farm.Uid,
-                CreatedAt = DateTime.UtcNow
-            };
-            db.CROPs.Add(entity);
-            db.SaveChanges();
-            return CreatedAtAction(nameof(getbyid), new { id = entity.Cid }, new CropResponseDto
-            {
-                Cid = entity.Cid,
-                FarmId = entity.FarmId,
-                Pid = entity.Pid,
-                Notes = entity.Notes,
-                Area_size = entity.Area_size,
-                Start_date = entity.Start_date,
-                Soil_type = entity.Soil_type,
-                Current_Stage = entity.Current_Stage,
-                Uid = entity.Uid
-            });
+        _db.CROPs.Add(entity);
+        await _db.SaveChangesAsync(ct);
 
-
-        }
-        //edit
-        [HttpPut("{id}")]
-        public ActionResult edit(CropRequestDto b, int id)
+        return CreatedAtAction(nameof(GetById), new { id = entity.Cid }, new CropResponseDto
         {
-            var uid = UserClaims.RequireUid(User);
+            Cid = entity.Cid,
+            FarmId = entity.FarmId,
+            Pid = entity.Pid,
+            Notes = entity.Notes,
+            Area_size = entity.Area_size,
+            Start_date = entity.Start_date,
+            Soil_type = entity.Soil_type,
+            Current_Stage = entity.Current_Stage,
+            Uid = entity.Uid
+        });
+    }
 
-            if (b == null) return BadRequest("tasks is null");
-            var entity = db.CROPs.Find(id);
-            if (entity == null) return NotFound();
-            if (entity.Uid != uid) return Forbid();
-            if (!b.Pid.HasValue) return BadRequest("Pid (plant id) is required.");
-            if (!db.PLANTs.Any(p => p.Pid == b.Pid.Value)) return BadRequest("Plant not found.");
-            if (b.FarmId.HasValue && b.FarmId != entity.FarmId)
-            {
-                var farm = db.FARMs.Find(b.FarmId.Value);
-                if (farm is null) return BadRequest("Farm not found.");
-                if (farm.Uid != uid) return Forbid();
-                entity.FarmId = b.FarmId;
-                entity.Uid = farm.Uid;
-                entity.Soil_type = farm.Default_Soil_type;
-            }
-            entity.Pid = b.Pid;
-            entity.Notes = b.Notes;
-            entity.Area_size = b.Area_size;
-            entity.Start_date = b.Start_date;
-            entity.Current_Stage = b.Current_Stage;
-            db.SaveChanges();
-            return NoContent();
+    // ????????????? PUT ?????????????
+    [HttpPut("{id:int}")]
+    public async Task<ActionResult> Update(int id, CropRequestDto dto, CancellationToken ct)
+    {
+        var uid = UserClaims.RequireUid(User);
 
-        }
-        [HttpGet("{cid}/products")]
-        public IActionResult GetProductsByCrop(int cid)
+        var entity = await _db.CROPs.FirstOrDefaultAsync(c => c.Cid == id, ct);
+
+        if (entity is null)
+            return NotFound();
+
+        if (entity.Uid != uid)
+            return Forbid();
+
+        if (!dto.Pid.HasValue)
+            return BadRequest("Pid is required");
+
+        var plantExists = await _db.PLANTs.AnyAsync(p => p.Pid == dto.Pid.Value, ct);
+        if (!plantExists)
+            return BadRequest("Plant not found");
+
+        if (dto.FarmId.HasValue && dto.FarmId != entity.FarmId)
         {
-            var uid = UserClaims.RequireUid(User);
-            var crop = db.CROPs.Find(cid);
-            if (crop is null) return NotFound();
-            if (crop.Uid != uid) return Forbid();
+            var farm = await _db.FARMs.FirstOrDefaultAsync(f => f.FarmId == dto.FarmId.Value, ct);
 
-            var products = db.PRODUCTs
-                .Where(p => p.Cid == cid)
-                .ToList();
+            if (farm is null)
+                return BadRequest("Farm not found");
 
-            return Ok(products);
+            if (farm.Uid != uid)
+                return Forbid();
+
+            entity.FarmId = dto.FarmId;
+            entity.Soil_type = farm.Default_Soil_type;
+            entity.Uid = uid;
         }
-        [HttpGet("{cid}/diagnosis")]
-        public IActionResult GetDiagnosis(int cid)
-        {
-            var uid = UserClaims.RequireUid(User);
-            var crop = db.CROPs.Find(cid);
-            if (crop is null) return NotFound();
-            if (crop.Uid != uid) return Forbid();
 
-            var diagnosis = db.AI_Diagnoses
-                .Where(d => d.Cid == cid)
-                .ToList();
+        entity.Pid = dto.Pid;
+        entity.Notes = dto.Notes;
+        entity.Area_size = dto.Area_size;
+        entity.Start_date = dto.Start_date;
+        entity.Current_Stage = dto.Current_Stage;
 
-            return Ok(diagnosis);
-        }
-        [HttpGet("{cid}/fertilizers")]
-        public IActionResult GetFertilizers(int cid)
-        {
-            var uid = UserClaims.RequireUid(User);
-            var crop = db.CROPs.Find(cid);
-            if (crop is null) return NotFound();
-            if (crop.Uid != uid) return Forbid();
+        await _db.SaveChangesAsync(ct);
 
-            var fertilizers = db.CROPs
-                .Where(c => c.Cid == cid)
-                .SelectMany(c => c.Frs)
-                .ToList();
+        return NoContent();
+    }
 
-            return Ok(fertilizers);
-        }
+    // ????????????? DELETE ?????????????
+    [HttpDelete("{id:int}")]
+    public async Task<ActionResult> Delete(int id, CancellationToken ct)
+    {
+        var uid = UserClaims.RequireUid(User);
+
+        var entity = await _db.CROPs.FirstOrDefaultAsync(c => c.Cid == id, ct);
+
+        if (entity is null)
+            return NotFound();
+
+        if (entity.Uid != uid)
+            return Forbid();
+
+        _db.CROPs.Remove(entity);
+        await _db.SaveChangesAsync(ct);
+
+        return Ok(new { id, deleted = true });
+    }
+
+    // ????????????? Crop AI / diagnosis ?????????????
+    [HttpGet("{cid:int}/diagnosis")]
+    public async Task<ActionResult> GetDiagnosis(int cid)
+    {
+        var uid = UserClaims.RequireUid(User);
+
+        var crop = await _db.CROPs.FirstOrDefaultAsync(c => c.Cid == cid);
+
+        if (crop is null)
+            return NotFound();
+
+        if (crop.Uid != uid)
+            return Forbid();
+
+        var diagnosis = await _db.AI_Diagnoses
+            .AsNoTracking()
+            .Where(d => d.Cid == cid)
+            .ToListAsync();
+
+        return Ok(diagnosis);
+    }
+
+    // ????????????? Fertilizers (FIXED) ?????????????
+    [HttpGet("{cid:int}/fertilizers")]
+    public async Task<ActionResult> GetFertilizers(int cid)
+    {
+        var uid = UserClaims.RequireUid(User);
+
+        var crop = await _db.CROPs
+            .Include(c => c.Frs)
+            .FirstOrDefaultAsync(c => c.Cid == cid);
+
+        if (crop is null)
+            return NotFound();
+
+        if (crop.Uid != uid)
+            return Forbid();
+
+        return Ok(crop.Frs);
     }
 }

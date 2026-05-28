@@ -176,7 +176,6 @@ public partial class farContext : IdentityDbContext<AppUser, IdentityRole<int>, 
         {
             entity.HasKey(e => e.Pid).HasName("PK__PRODUCT__C5705938F6FC9017");
 
-            entity.HasOne(d => d.CidNavigation).WithMany(p => p.PRODUCTs).HasConstraintName("FK__PRODUCT__Cid__46E78A0C");
 
             entity.HasOne(d => d.UidNavigation).WithMany(p => p.PRODUCTs).HasConstraintName("FK__PRODUCT__Uid__45F365D3");
 

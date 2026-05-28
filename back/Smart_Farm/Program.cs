@@ -32,6 +32,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
 
 // ===================== SERVICES =====================
 
+builder.Services.AddMemoryCache();
 builder.Services.AddControllers();
 builder.Services.AddSingleton<CloudinaryService>();
 builder.Services.AddEndpointsApiExplorer();

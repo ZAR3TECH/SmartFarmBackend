@@ -1,5 +1,6 @@
 using System.Globalization;
 using System.Text.Json;
+using Microsoft.Extensions.Caching.Memory;
 using Smart_Farm.Application.Abstractions;
 
 namespace Smart_Farm.Infrastructure.External;
@@ -7,11 +8,20 @@ namespace Smart_Farm.Infrastructure.External;
 public class OpenMeteoWeatherProvider : IWeatherProvider
 {
     private readonly IHttpClientFactory _httpClientFactory;
+    private readonly IMemoryCache _cache;
     private readonly ILogger<OpenMeteoWeatherProvider> _logger;
 
-    public OpenMeteoWeatherProvider(IHttpClientFactory httpClientFactory, ILogger<OpenMeteoWeatherProvider> logger)
+    // Absolute fallback used only when cache is also empty (first-ever call failure).
+    private static readonly DailyWeather _hardcodedFallback =
+        new(DateOnly.MinValue, 18, 30, 0, 55, 2.0);
+
+    public OpenMeteoWeatherProvider(
+        IHttpClientFactory httpClientFactory,
+        IMemoryCache cache,
+        ILogger<OpenMeteoWeatherProvider> logger)
     {
         _httpClientFactory = httpClientFactory;
+        _cache = cache;
         _logger = logger;
     }
 
@@ -21,11 +31,12 @@ public class OpenMeteoWeatherProvider : IWeatherProvider
         DateOnly date,
         CancellationToken cancellationToken)
     {
-        // Open-Meteo: historical/archive for past, forecast for today/future.
-        // We use the forecast endpoint which gracefully supports a single-day window including today.
         var lat = latitude.ToString(CultureInfo.InvariantCulture);
         var lon = longitude.ToString(CultureInfo.InvariantCulture);
-        var d = date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+        var d   = date.ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+
+        // Cache key: rounded to 2 decimal places so nearby points share the same entry.
+        var cacheKey = $"wx:{Math.Round(latitude, 2)}:{Math.Round(longitude, 2)}";
 
         var url = $"https://api.open-meteo.com/v1/forecast"
                 + $"?latitude={lat}&longitude={lon}"
@@ -45,20 +56,35 @@ public class OpenMeteoWeatherProvider : IWeatherProvider
 
             var daily = doc.RootElement.GetProperty("daily");
 
-            double tmax = FirstNumber(daily, "temperature_2m_max") ?? 25;
-            double tmin = FirstNumber(daily, "temperature_2m_min") ?? 15;
-            double rain = FirstNumber(daily, "precipitation_sum") ?? 0;
-            double? rh = FirstNumber(daily, "relative_humidity_2m_mean");
-            double? wind_kmh = FirstNumber(daily, "wind_speed_10m_max");
-            double? wind_mps = wind_kmh.HasValue ? wind_kmh.Value / 3.6 : (double?)null;
+            double tmax     = FirstNumber(daily, "temperature_2m_max")          ?? 25;
+            double tmin     = FirstNumber(daily, "temperature_2m_min")          ?? 15;
+            double rain     = FirstNumber(daily, "precipitation_sum")           ?? 0;
+            double? rh      = FirstNumber(daily, "relative_humidity_2m_mean");
+            double? windKmh = FirstNumber(daily, "wind_speed_10m_max");
+            double? windMps = windKmh.HasValue ? windKmh.Value / 3.6 : (double?)null;
 
-            return new DailyWeather(date, tmin, tmax, rain, rh, wind_mps);
+            var result = new DailyWeather(date, tmin, tmax, rain, rh, windMps);
+
+            // Store successful result — expire after 26 hours (covers tomorrow's morning run).
+            _cache.Set(cacheKey, result, TimeSpan.FromHours(26));
+
+            return result;
         }
         catch (Exception ex)
         {
-            _logger.LogWarning(ex, "Open-Meteo fetch failed for {Lat},{Lon} on {Date}. Falling back to defaults.", lat, lon, d);
-            // Safe fallback so the recommendation pipeline still works offline.
-            return new DailyWeather(date, 18, 30, 0, 55, 2.0);
+            // Try to return last known values for this location.
+            if (_cache.TryGetValue(cacheKey, out DailyWeather? cached) && cached is not null)
+            {
+                _logger.LogWarning(ex,
+                    "Open-Meteo fetch failed for {Lat},{Lon} on {Date}. Using last cached values from {CachedDate}.",
+                    lat, lon, d, cached.Date);
+                return cached with { Date = date, Rain_mm = 0 }; // reset rain — don't assume it'll rain again
+            }
+
+            _logger.LogWarning(ex,
+                "Open-Meteo fetch failed for {Lat},{Lon} on {Date}. No cache available — using hardcoded fallback.",
+                lat, lon, d);
+            return _hardcodedFallback with { Date = date };
         }
     }
 

@@ -1,4 +1,4 @@
-﻿using CloudinaryDotNet.Actions;
+using CloudinaryDotNet.Actions;
 using CloudinaryDotNet;
 
 public class CloudinaryService
@@ -15,6 +15,7 @@ public class CloudinaryService
         _cloudinary = new Cloudinary(acc);
     }
 
+    // Generic upload — keeps existing callers working
     public async Task<string> UploadImageAsync(IFormFile file)
     {
         using var stream = file.OpenReadStream();
@@ -24,6 +25,24 @@ public class CloudinaryService
             Folder = "smart_farm"
         };
         var result = await _cloudinary.UploadAsync(uploadParams);
+        return result.SecureUrl.ToString();
+    }
+
+    // Targeted upload — used by DiagnoseAsync to place the image alongside its record
+    public async Task<string> UploadImageAsync(Stream stream, string fileName, string folder, string publicId)
+    {
+        var uploadParams = new ImageUploadParams
+        {
+            File = new FileDescription(fileName, stream),
+            Folder = folder,
+            PublicId = publicId,
+            Overwrite = true
+        };
+        var result = await _cloudinary.UploadAsync(uploadParams);
+
+        if (result.Error is not null)
+            throw new InvalidOperationException($"Cloudinary upload failed: {result.Error.Message}");
+
         return result.SecureUrl.ToString();
     }
 }

@@ -1,18 +1,23 @@
-﻿using CloudinaryDotNet;
+using CloudinaryDotNet;
 using CloudinaryDotNet.Actions;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Smart_Farm.Application.Abstractions;
+using Smart_Farm.Common;
 using Smart_Farm.DTOS;
+using Smart_Farm.Infrastructure.Security;
 using Smart_Farm.Models;
+using System.Security.Claims;
 
 namespace Smart_Farm.Controllers;
 
 [Authorize]
 [ApiController]
 [Route("api/[controller]")]
-public class AIDiagnosesController(IAIDiagnosisService service, IConfiguration configuration) : ControllerBase
+public class AIDiagnosesController(
+    IAIDiagnosisService service,
+    IConfiguration configuration) : ControllerBase
 {
     private readonly Cloudinary _cloudinary = new(new Account(
         configuration["Cloudinary:CloudName"],
@@ -20,29 +25,49 @@ public class AIDiagnosesController(IAIDiagnosisService service, IConfiguration c
         configuration["Cloudinary:ApiSecret"]
     ));
 
+    private static readonly string[] AllowedImageTypes = ["image/jpeg", "image/png"];
+
+    // ─── Helper: extract UserId from JWT ────────────────────────────────────
+    private int? GetUserId()
+    {
+        var claim = User.FindFirstValue("uid");
+        return int.TryParse(claim, out var id) ? id : null;
+    }
+
     // ─── GET api/AIdiagnoses ─────────────────────────────────────────────────
     [HttpGet]
     public async Task<ActionResult<IReadOnlyList<AIDiagnosisResponseDto>>> GetAll(CancellationToken cancellationToken)
     {
-        var items = await service.GetAllAsync(cancellationToken);
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var items = await service.GetAllAsync(userId.Value, cancellationToken);
         return Ok(items);
     }
 
     // ─── POST api/AIdiagnoses ────────────────────────────────────────────────
     [HttpPost]
     [Consumes("multipart/form-data")]
-    public async Task<ActionResult<DiagnoseResultDto>> Diagnose([FromForm] DiagnoseRequest request, CancellationToken cancellationToken)
+    public async Task<ActionResult<DiagnoseFullResultDto>> Diagnose(
+        [FromForm] DiagnoseRequest request, CancellationToken cancellationToken)
     {
         if (request.Image is null)
-            return BadRequest("Image is required.");
+            return BadRequest("الصورة مطلوبة.");
 
-        var result = await service.DiagnoseAsync(request.Image, cancellationToken);
+        if (!AllowedImageTypes.Contains(request.Image.ContentType.ToLower()))
+            return BadRequest("نوع الصورة غير مدعوم. يُسمح فقط بـ JPG و PNG.");
+
+        var userId = GetUserId();
+        if (userId is null) return Unauthorized();
+
+        var result = await service.DiagnoseAsync(request, userId.Value, cancellationToken);
         return Ok(result);
     }
 
     // ─── GET api/AIdiagnoses/{id} ────────────────────────────────────────────
     [HttpGet("{id:int}")]
-    public async Task<ActionResult<AIDiagnosisResponseDto>> GetById([FromRoute] int id, CancellationToken cancellationToken)
+    public async Task<ActionResult<AIDiagnosisResponseDto>> GetById(
+        [FromRoute] int id, CancellationToken cancellationToken)
     {
         var item = await service.GetByIdAsync(id, cancellationToken);
         return item is null ? NotFound() : Ok(item);
@@ -50,7 +75,8 @@ public class AIDiagnosesController(IAIDiagnosisService service, IConfiguration c
 
     // ─── GET api/AIdiagnoses/{id}/image ─────────────────────────────────────
     [HttpGet("{id:int}/image")]
-    public async Task<IActionResult> GetImage([FromRoute] int id, [FromServices] farContext db, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetImage(
+        [FromRoute] int id, [FromServices] farContext db, CancellationToken cancellationToken)
     {
         var entity = await db.AI_Diagnoses.FindAsync([id], cancellationToken);
         if (entity is null) return NotFound();
@@ -62,21 +88,20 @@ public class AIDiagnosesController(IAIDiagnosisService service, IConfiguration c
     }
 
     // ─── PUT api/AIdiagnoses/{id}/image ─────────────────────────────────────
-    [HttpPut("{id:int}/image")] 
+    [HttpPut("{id:int}/image")]
     [Consumes("multipart/form-data")]
-    public async Task<IActionResult> UploadImage([FromRoute] int id, IFormFile file, [FromServices] farContext db, CancellationToken cancellationToken)
+    public async Task<IActionResult> UploadImage(
+        [FromRoute] int id, IFormFile file, [FromServices] farContext db, CancellationToken cancellationToken)
     {
         if (file is null || file.Length == 0)
             return BadRequest("No file provided.");
 
-        var allowed = new[] { "image/jpeg", "image/png", "image/webp" };
-        if (!allowed.Contains(file.ContentType.ToLower()))
-            return BadRequest("Only jpg, png, webp images are allowed.");
+        if (!AllowedImageTypes.Contains(file.ContentType.ToLower()))
+            return BadRequest("نوع الصورة غير مدعوم. يُسمح فقط بـ JPG و PNG.");
 
         var entity = await db.AI_Diagnoses.FindAsync([id], cancellationToken);
         if (entity is null) return NotFound();
 
-        // Delete old image from Cloudinary if exists
         if (!string.IsNullOrWhiteSpace(entity.plant_image))
         {
             var oldPublicId = ExtractPublicId(entity.plant_image);
@@ -84,7 +109,6 @@ public class AIDiagnosesController(IAIDiagnosisService service, IConfiguration c
                 await _cloudinary.DestroyAsync(new DeletionParams(oldPublicId));
         }
 
-        // Upload new image
         await using var stream = file.OpenReadStream();
         var uploadResult = await _cloudinary.UploadAsync(new ImageUploadParams
         {
@@ -105,7 +129,8 @@ public class AIDiagnosesController(IAIDiagnosisService service, IConfiguration c
 
     // ─── DELETE api/AIdiagnoses/{id}/image ──────────────────────────────────
     [HttpDelete("{id:int}/image")]
-    public async Task<IActionResult> DeleteImage([FromRoute] int id, [FromServices] farContext db, CancellationToken cancellationToken)
+    public async Task<IActionResult> DeleteImage(
+        [FromRoute] int id, [FromServices] farContext db, CancellationToken cancellationToken)
     {
         var entity = await db.AI_Diagnoses.FindAsync([id], cancellationToken);
         if (entity is null) return NotFound();
@@ -125,29 +150,46 @@ public class AIDiagnosesController(IAIDiagnosisService service, IConfiguration c
 
     // ─── GET api/AIdiagnoses/{id}/report ────────────────────────────────────
     [HttpGet("{id:int}/report")]
-    public async Task<IActionResult> GetReport([FromRoute] int id, [FromServices] farContext db, CancellationToken cancellationToken)
+    public async Task<IActionResult> GetReport(
+        [FromRoute] int id, [FromServices] farContext db, CancellationToken cancellationToken)
     {
         var entity = await db.AI_Diagnoses.AsNoTracking()
             .FirstOrDefaultAsync(x => x.ADid == id, cancellationToken);
         if (entity is null) return NotFound();
 
-        return Ok(new { id, report = entity.GeminiArabicReport });
+        return Ok(new { id, report = ReportJsonSerializer.Deserialize(entity.GrogArabicReport) });
+    }
+
+    // ─── POST api/AIdiagnoses/{id}/report/regenerate ─────────────────────────
+    // Backfill: regenerate Groq report for a diagnosis that has null report
+    [HttpPost("{id:int}/report/regenerate")]
+    public async Task<IActionResult> RegenerateReport(
+        [FromRoute] int id, CancellationToken cancellationToken)
+    {
+        if (!UserClaims.TryGetUid(User, out var userId))
+            return Unauthorized();
+
+        try
+        {
+            var report = await service.RegenerateReportAsync(id, userId, cancellationToken);
+            if (report is null)
+                return NotFound();
+
+            return Ok(new { id, report });
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, $"فشل إنشاء التقرير: {ex.Message}");
+        }
     }
 
     // ─── PUT api/AIdiagnoses/{id} ────────────────────────────────────────────
     [HttpPut("{id:int}")]
-    public async Task<IActionResult> Update([FromRoute] int id, [FromBody] UpdateAIDiagnosisRequestDto request, CancellationToken cancellationToken)
+    public async Task<IActionResult> Update(
+        [FromRoute] int id, [FromBody] UpdateAIDiagnosisRequestDto request, CancellationToken cancellationToken)
     {
         var updated = await service.UpdateAsync(id, request, cancellationToken);
         return updated ? Ok() : NotFound();
-    }
-
-    // ─── POST api/AIdiagnoses/gemini-report ──────────────────────────────────
-    [HttpPost("gemini-report")]
-    public async Task<ActionResult<string>> GeminiReport([FromBody] DiagnoseResultDto request, CancellationToken cancellationToken)
-    {
-        var report = await service.GenerateArabicReportAsync(request, cancellationToken);
-        return Ok(report);
     }
 
     // ─── Helper ──────────────────────────────────────────────────────────────

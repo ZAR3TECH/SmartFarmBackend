@@ -1,9 +1,7 @@
-﻿using Microsoft.AspNetCore.Http;
+namespace Smart_Farm.DTOS;
 
-namespace Smart_Farm.DTOS
+public class DiagnoseRequest
 {
-    public class DiagnoseRequest
-    {
-        public IFormFile? Image { get; set; }
-    }
+    public IFormFile? Image { get; set; }
+    public int? Cid { get; set; }   // ← optional: diagnose with or without a crop
 }
